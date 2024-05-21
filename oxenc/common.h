@@ -17,4 +17,10 @@ concept basic_char = sizeof(Char) == 1 && !std::same_as<Char, bool> &&
 
 using namespace std::literals;
 
+inline std::string_view trim_prefix(std::string_view src, std::string_view prefix) noexcept {
+    std::string_view result = src;
+    if (result.starts_with(prefix))
+        return result.substr(prefix.size());
+    return result;
+}
 }  // namespace oxenc
