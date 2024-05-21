@@ -276,6 +276,40 @@ std::string from_hex(const std::basic_string<CharT>& s) {
     return from_hex(s.begin(), s.end());
 }
 
+template <typename T>
+concept convertible_from_hex = !std::is_const_v<T> && std::is_trivially_copyable_v<T>;
+
+template <typename T>
+concept convertible_to_hex =
+        (std::is_standard_layout_v<T> && std::has_unique_object_representations_v<T>);
+
+
+enum class hex_to_type_result
+{
+    ok,
+    non_hex_chars,
+    invalid_size,
+};
+
+// Reads a hex string directly into a trivially copyable type T without performing any temporary
+// allocation.  Returns false if the given string is not hex or does not match T in length,
+// otherwise copies directly into `x` and returns true.
+template <convertible_from_hex T>
+hex_to_type_result hex_to_type(std::string_view hex, T& x) {
+    if (hex.size() != 2 * sizeof(T))
+        return hex_to_type_result::invalid_size;
+    if (!oxenc::is_hex(hex))
+        return hex_to_type_result::non_hex_chars;
+    from_hex(hex.begin(), hex.end(), reinterpret_cast<char*>(&x));
+    return hex_to_type_result::ok;
+}
+
+/// Converts a standard layout, padding-free type into a hex string of its contents.
+template <convertible_to_hex T>
+std::string type_to_hex(const T& val) {
+    return to_hex(std::string_view{reinterpret_cast<const char*>(&val), sizeof(val)});
+}
+
 namespace detail {
     template <basic_char Char, size_t N>
     struct hex_literal {
